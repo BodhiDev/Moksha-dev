@@ -1,0 +1,152 @@
+#! /usr/bin/env bash
+# shellcheck disable=SC2034
+#
+#   Bodhi Linux (c) 2020
+#   Author : rbt y-lee <ylee@bodhilinux.com>
+#
+# This work is free. You can redistribute it and/or modify it under the
+# terms of the Do What The Fuck You Want To Public License, Version 2,
+# as published by Sam Hocevar. See http://www.wtfpl.net/ for more details.
+
+# TO DO
+#   possible output window for many selected at once
+#   Option of sourcing rc file in ~/
+#   Handle errors such as permission problems and no internet
+#   Weird issue with yad and my *.list files
+
+# Some shit we need
+KEY=$RANDOM
+SOURCE="/src"
+Moksha_Ths="/usr/share/bodhidev/moksha_theme.list"
+Elm_Ths="/usr/share/bodhidev/elm_theme.list"
+App_Ths="/usr/share/bodhidev/app_theme.list"
+Gtk_Ths="/usr/share/bodhidev/gtk_theme.list"
+Old_Ths="/usr/share/bodhidev/old_theme.list"
+Dpkg_Ths="/usr/share/bodhidev/dpkg_theme.list"
+
+declare -A m_th_git
+declare -A e_th_git
+declare -A app_th_git
+declare -A old_th_git
+declare -A gtk_th_git
+declare -A dpkg_th_git
+
+res1=$(mktemp --tmpdir theme-tab1.XXXXXXXX)
+res2=$(mktemp --tmpdir theme-tab2.XXXXXXXX)
+res3=$(mktemp --tmpdir theme-tab3.XXXXXXXX)
+res4=$(mktemp --tmpdir theme-tab4.XXXXXXXX)
+res5=$(mktemp --tmpdir theme-tab5.XXXXXXXX)
+res6=$(mktemp --tmpdir theme-tab6.XXXXXXXX)
+log="/tmp/dev-$(date +%s)"
+
+# Make Dir and cd to it.
+mkcdir ()
+{
+    mkdir -p -- "$1" || cleanup 1
+    cd -P -- "$1" || cleanup 1
+}
+
+# Read data into needed arrays
+read_data()
+{
+   local -n dict=$1
+   local -n names=$2
+
+   while IFS=$'\t' read -r name add; do
+       dict[$name]=$add; names+=("$name");
+   done
+}
+
+# Clone selected git repos
+clone_selection()
+{
+   local -n ARR=$4
+   local sel_tab
+   readarray sel_tab < "$1"
+   if (( ${#sel_tab[@]} )); then
+       mkcdir "$2"
+       echo  "$3s path: $2"; sleep 2s;
+       for res in "${sel_tab[@]}"; do
+           n=$(echo "$res" | cut -d'|' -f2)
+           echo "Cloning $3 $n ..."
+           if ! git clone "${ARR[$n]}"; then
+              echo "Error cloning $3 $n"; sleep 4s;
+           fi
+       done
+   fi
+}
+
+# cleanup and exit.
+cleanup ()
+{
+    rm "$res1"
+    rm "$res2"
+    rm "$res3"
+    rm "$res4"
+    rm "$res5"
+    rm "$res6"
+    exit "$1"
+}
+
+# Read all the data we need into arrays
+read_data m_th_git M_TH_NAME < $Moksha_Ths
+read_data e_th_git E_TH_NAME < $Elm_Ths
+read_data app_th_git APP_TH_NAME < $App_Ths
+read_data gtk_th_git GTK_TH_NAME < $Gtk_Ths
+read_data old_th_git OLD_TH_NAME < $Old_Ths
+read_data dpkg_th_git DPKG_TH_NAME < $Dpkg_Ths
+
+# yad Tabs
+yad --plug=$KEY --tabnum=1 --text="\nBodhi Moksha Themes\n\n\t<i>Not all themes fully functional</i>" \
+  --list --checklist  --no-headers --column= --column=Theme \
+   "${M_TH_NAME[@]}" > "$res1" &
+yad --plug=$KEY --tabnum=2 --text="\nElementary Themes\n\n\t<i>Some themes unmaintained</i>" \
+   --list --checklist  --no-headers --column= --column=Theme \
+   "${E_TH_NAME[@]}" > "$res2" &
+yad --plug=$KEY --tabnum=3 --text="\nApp Themes\n\n\t<i>Only terminology currently</i>" \
+   --list --checklist  --no-headers --column= --column=Theme \
+   "${APP_TH_NAME[@]}" > "$res3" &
+yad --plug=$KEY --tabnum=4 --text="\nGtk Themes\n\n<i>\tUsed or maintained by Bodhi</i>" \
+   --list --checklist  --no-headers --column= --column=Theme \
+   "${GTK_TH_NAME[@]}" > "$res4" &
+yad --plug=$KEY --tabnum=5 --text="\nOld Themes\n\n<i>\tProbably broken !!</i>" \
+   --list --checklist  --no-headers --column= --column=Theme \
+   "${OLD_TH_NAME[@]}" > "$res5" &
+yad --plug=$KEY --tabnum=6 --text="\nDebian Folders for Themes\n\n<i>\tHopefully current with the repos</i>" \
+   --list --checklist  --no-headers --column= --column=Theme \
+   "${DPKG_TH_NAME[@]}" > "$res6" &
+
+# yad Main Dialog
+TXT=$"\\n\\tOS: $(lsb_release -ds) on $(hostname)\\n"
+TXT+=$"\\tDesktop: $DESKTOP\\n"
+TXT+=$"\\tEFL: <b>$(efl_version)</b>\\n"
+
+yad --notebook --key=$KEY --center --title="  Themes" --window-icon=preferences-system\
+  --tab="Moksha" --tab="Elm" --tab="App" --tab="Gtk" --tab="Old" --tab="Dpkg" --text="$TXT" \
+  --button=gtk-cancel:1 --button=" Source"!gtk-go-down:0
+if [ $? == 1 ]; then
+   cleanup 1
+fi
+
+# yad Progress bar for downloading
+{   # Process selections if any
+    echo "Processing selections ..."
+    clone_selection "$res1" "$SOURCE/Moksha/themes" "Moksha Theme" m_th_git
+    clone_selection "$res2" "$SOURCE/Enlightenment/themes" "Elementary Theme" e_th_git
+    clone_selection "$res3" "$SOURCE" "" app_th_git
+    clone_selection "$res4" "$SOURCE/Gtk" "Gtk Theme" gtk_th_git
+    clone_selection "$res5" "$SOURCE/Broken" "Old Theme" old_th_git
+    clone_selection "$res6" "$SOURCE/Packaging" "Package" dpkg_th_git
+} 2> "${log}" | while read -r line; do echo "# ${line}"; done |
+yad --window-icon=download --progress --pulsate --center --no-buttons \
+        --auto-close --progress-text='Downloading ...' --width=400 \
+        --title="Downloading ..."
+
+# Yad Display command output
+out=$(cat "${log}")
+if [ "${out}" != "" ]; then
+    echo "${out}" >&2
+    yad --window-icon=preferences-system --center --button=OK:1 --title="Output" --text="${out}"
+fi
+
+cleanup 0
