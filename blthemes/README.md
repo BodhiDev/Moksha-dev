@@ -11,4 +11,6 @@ This program clones all git repos to /scr. Your user must have permissions set t
 It is recommended to create a group siddha and the direcory /usr and set rw permissions to user root and group siddha.
 Then add whatever users need access to this directory to the group siddha.
 
+Everything in /blthemes/usr/share/bodhidev/ needs copied to /usr/share/bodhidev.
+
 [![Screenshot](https://i.imgur.com/5Hxm6am.png)](https://i.imgur.com/5Hxm6am.png)
