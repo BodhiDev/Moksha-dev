@@ -121,7 +121,8 @@ TXT=$"\\n\\tOS: $(lsb_release -ds) on $(hostname)\\n"
 TXT+=$"\\tDesktop: $DESKTOP\\n"
 TXT+=$"\\tEFL: <b>$(efl_version)</b>\\n"
 
-yad --notebook --key=$KEY --center --title="  Themes" --window-icon=preferences-system\
+yad --notebook --key=$KEY --center --title="  Themes" \
+   --window-icon=preferences-system --image=gnome-settings-theme --image-on-top \
   --tab="Moksha" --tab="Elm" --tab="App" --tab="Gtk" --tab="Old" --tab="Dpkg" --text="$TXT" \
   --button=gtk-cancel:1 --button=" Source"!gtk-go-down:0
 if [ $? == 1 ]; then
