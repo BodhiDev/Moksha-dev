@@ -1,0 +1,153 @@
+#! /usr/bin/env bash
+# shellcheck disable=SC2034
+#
+#   Bodhi Linux (c) 2020
+#   Author : rbt y-lee <ylee@bodhilinux.com>
+#
+# This work is free. You can redistribute it and/or modify it under the
+# terms of the Do What The Fuck You Want To Public License, Version 2,
+# as published by Sam Hocevar. See http://www.wtfpl.net/ for more details.
+
+# TO DO
+#   possible output window for many selected at once
+#   Option of sourcing rc file in ~/
+#   Handle errors such as permission problems and no internet
+#   Weird issue with yad and my *.list files
+
+# Some shit we need
+KEY=$RANDOM
+SOURCE="/src"
+Jeff_Apps="/usr/share/bodhidev/jeffapp.list"
+E_Apps="/usr/share/bodhidev/eflapp.list"
+Misc_Apps="/usr/share/bodhidev/eflmisc.list"
+Game_Apps="/usr/share/bodhidev/games.list"
+Bindings="/usr/share/bodhidev/bindings.list"
+Dev_Apps="/usr/share/bodhidev/devapp.list"
+
+declare -A jeff_app_git
+declare -A e_app_git
+declare -A misc_app_git
+declare -A game_app_git
+declare -A bindings_git
+declare -A dev_app_git
+
+res1=$(mktemp --tmpdir theme-tab1.XXXXXXXX)
+res2=$(mktemp --tmpdir theme-tab2.XXXXXXXX)
+res3=$(mktemp --tmpdir theme-tab3.XXXXXXXX)
+res4=$(mktemp --tmpdir theme-tab4.XXXXXXXX)
+res5=$(mktemp --tmpdir theme-tab5.XXXXXXXX)
+res6=$(mktemp --tmpdir theme-tab6.XXXXXXXX)
+log="/tmp/dev-$(date +%s)"
+
+# Make Dir and cd to it.
+mkcdir ()
+{
+    mkdir -p -- "$1" || cleanup 1
+    cd -P -- "$1" || cleanup 1
+}
+
+# Read data into needed arrays
+read_data()
+{
+   local -n dict=$1
+   local -n names=$2
+
+   while IFS=$'\t' read -r name add; do
+       dict[$name]=$add; names+=("$name");
+   done
+}
+
+# Clone selected git repos
+clone_selection()
+{
+   local -n ARR=$4
+   local sel_tab
+   readarray sel_tab < "$1"
+   if (( ${#sel_tab[@]} )); then
+       mkcdir "$2"
+       echo  "$3s path: $2"; sleep 2s;
+       for res in "${sel_tab[@]}"; do
+           n=$(echo "$res" | cut -d'|' -f2)
+           echo "Cloning $3 $n ..."
+           if ! git clone "${ARR[$n]}"; then
+              echo "Error cloning $3 $n"; sleep 4s;
+           fi
+       done
+   fi
+}
+
+# cleanup and exit.
+cleanup ()
+{
+    rm "$res1"
+    rm "$res2"
+    rm "$res3"
+    rm "$res4"
+    rm "$res5"
+    rm "$res6"
+    exit "$1"
+}
+
+# Read all the data we need into arrays
+read_data jeff_app_git JEFF_APP_NAME < $Jeff_Apps
+read_data e_app_git E_APP_NAME < $E_Apps
+read_data misc_app_git MISC_APP_NAME < $Misc_Apps
+read_data game_app_git GAME_APP_NAME < $Game_Apps
+read_data bindings_git BINDING_NAME < $Bindings
+read_data dev_app_git DEV_APP_NAME < $Dev_Apps
+
+# yad Tabs
+yad --plug=$KEY --tabnum=1 --text="\nJeff's py-elm Applications\n\n\t<i>May not be fully functional.</i>" \
+  --list --checklist  --no-headers --column= --column=Theme \
+   "${JEFF_APP_NAME[@]}" > "$res1" &
+yad --plug=$KEY --tabnum=2 --text="\nE Developer Applications.\n\n\t<i>Some apps unmaintained</i>" \
+   --list --checklist  --no-headers --column= --column=Theme \
+   "${E_APP_NAME[@]}" > "$res2" &
+yad --plug=$KEY --tabnum=3 --text="\nMisc Efl Applications on github .\n\n\t<i>Some apps unmaintained</i>" \
+   --list --checklist  --no-headers --column= --column=Theme \
+   "${MISC_APP_NAME[@]}" > "$res3" &
+yad --plug=$KEY --tabnum=4 --text="\nMisc Efl Games .\n\n\t<i>Some apps unmaintained</i>" \
+   --list --checklist  --no-headers --column= --column=Theme \
+   "${GAME_APP_NAME[@]}" > "$res4" &  
+yad --plug=$KEY --tabnum=5 --text="\nEFL Bindings .\n\n\t<i>Language support</i>" \
+   --list --checklist  --no-headers --column= --column=Theme \
+   "${BINDING_NAME[@]}" > "$res5" &  
+yad --plug=$KEY --tabnum=6 --text="\nDevelopment Applications for EFL .\n\n\t<i>Some apps unmaintained</i>" \
+   --list --checklist  --no-headers --column= --column=Theme \
+   "${DEV_APP_NAME[@]}" > "$res6" &
+
+# yad Main Dialog
+TXT=$"\\n\\tOS: $(lsb_release -ds) on $(hostname)\\n"
+TXT+=$"\\tDesktop: $DESKTOP\\n"
+TXT+=$"\\tEFL: <b>$(efl_version)</b>\\n"
+
+yad --notebook --key=$KEY --center --title="  EFL Applications" --window-icon=gnome-devel\
+  --image=gnome-settings-theme --image-on-top \
+  --tab="Jeff" --tab="E git" --tab="Misc" --tab="Games" --tab="Bindings" --tab="Dev" --text="$TXT" \
+  --button=gtk-cancel:1 --button=" Source"!gtk-go-down:0
+if [ $? == 1 ]; then
+   cleanup 1
+fi
+
+# yad Progress bar for downloading
+{   # Process selections if any
+    echo "Processing selections ..."
+    clone_selection "$res1" "$SOURCE/EFL/jeff" "Jeff app" jeff_app_git
+    clone_selection "$res2" "$SOURCE/EFL/e_git" "E-dev app" e_app_git
+    clone_selection "$res3" "$SOURCE/EFL/misc" "Misc EFL app" misc_app_git
+    clone_selection "$res4" "$SOURCE/EFL/games" "EFL Game" games_app_git
+    clone_selection "$res5" "$SOURCE/EFL/bindings" "EFL Binding" bindings_git
+    clone_selection "$res6" "$SOURCE/EFL/dev" "Dev app" misc_app_git
+} 2> "${log}" | while read -r line; do echo "# ${line}"; done |
+yad --window-icon=download --progress --pulsate --center --no-buttons \
+        --auto-close --progress-text='Downloading ...' --width=400 \
+        --title="Downloading ..."
+
+# Yad Display command output
+out=$(cat "${log}")
+if [ "${out}" != "" ]; then
+    echo "${out}" >&2
+    yad --window-icon=preferences-system --center --button=OK:1 --title="Output" --text="${out}"
+fi
+
+cleanup 0
