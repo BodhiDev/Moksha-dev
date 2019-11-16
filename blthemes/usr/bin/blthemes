@@ -9,10 +9,9 @@
 # as published by Sam Hocevar. See http://www.wtfpl.net/ for more details.
 
 # TO DO
-#   possible output window for many selected at once
+#   possible huge output window for many selected at once
 #   Option of sourcing rc file in ~/
 #   Handle errors such as permission problems and no internet
-#   Weird issue with yad and my *.list files
 
 # Some shit we need
 KEY=$RANDOM
@@ -53,7 +52,7 @@ read_data()
    local -n names=$2
 
    while IFS=$'\t' read -r name add; do
-       dict[$name]=$add; names+=("$name");
+       dict[$name]=$add; names+=("FALSE" "$name");
    done
 }
 
@@ -122,7 +121,7 @@ TXT+=$"\\tDesktop: $DESKTOP\\n"
 TXT+=$"\\tEFL: <b>$(efl_version)</b>\\n"
 
 yad --notebook --key=$KEY --center --title="  Themes" \
-   --window-icon=preferences-system --image=gnome-settings-theme --image-on-top \
+  --window-icon=preferences-system --image=gnome-settings-theme --image-on-top \
   --tab="Moksha" --tab="Elm" --tab="App" --tab="Gtk" --tab="Old" --tab="Dpkg" --text="$TXT" \
   --button=gtk-cancel:1 --button=" Source"!gtk-go-down:0
 if [ $? == 1 ]; then

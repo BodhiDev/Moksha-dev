@@ -9,10 +9,9 @@
 # as published by Sam Hocevar. See http://www.wtfpl.net/ for more details.
 
 # TO DO
-#   possible output window for many selected at once
+#   possible huge output window for many selected at once
 #   Option of sourcing rc file in ~/
 #   Handle errors such as permission problems and no internet
-#   Weird issue with yad and my *.list files
 
 # Some shit we need
 KEY=$RANDOM
@@ -53,7 +52,7 @@ read_data()
    local -n names=$2
 
    while IFS=$'\t' read -r name add; do
-       dict[$name]=$add; names+=("$name");
+       dict[$name]=$add; names+=("FALSE" "$name");
    done
 }
 
