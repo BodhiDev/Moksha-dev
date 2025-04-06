@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# bodhi-config-path: Determine paths to Moksha/Elementary config files
+
+e_check() {
+  if ! command -v enlightenment_remote &> /dev/null; then
+    echo "Moksha or Enlightenment not found. Please install one of these."
+    exit 1
+  fi
+}
+
+get_elm_profile() {
+  elm-profile-get 2>/dev/null || echo "standard"
+}
+
+get_moksha_profile() {
+  e_check
+  echo "${E_CONF_PROFILE:-standard}"
+}
+
+get_home_dir() {
+  echo "${HOME:-$(getent passwd "$(whoami)" | cut -d: -f6)}"
+}
+
+if ! command -v elementary_test &> /dev/null; then
+  echo "Elementary not found. Please install Elementary."
+  exit 1
+fi
+
+case "$1" in
+  --elm)
+    echo "$(elm_config_path)/base.cfg"
+    ;;
+
+  --elm-base)
+    echo "$(elm_config_path)"
+    ;;
+
+  --elm-profile)
+    get_elm_profile
+    ;;
+
+  --moksha)
+    e_check
+    echo "${E_HOME_DIR:-$(get_home_dir)/.e}/e/config/$(get_moksha_profile)"
+    ;;
+
+  --moksha-profile)
+    get_moksha_profile
+    ;;
+
+  *)
+    echo "Usage: $0 [--elm | --elm-base | --elm-profile | --moksha | --moksha-profile]"
+    exit 1
+    ;;
+esac

@@ -1,0 +1,11 @@
+_bodhi_config_path()
+{
+    local cur prev opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    opts="--elm --elm-base --elm-profile --moksha --moksha-profile --help"
+
+    COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+    return 0
+}
+complete -F _bodhi_config_path bodhi-config-path
