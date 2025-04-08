@@ -29,11 +29,11 @@ fi
 
 case "$1" in
   --elm)
-    echo "$(elm_config_path)/base.cfg"
+    echo "$(elm-config-path)/base.cfg"
     ;;
 
   --elm-base)
-    echo "$(elm_config_path)"
+    echo "$(elm-config-path)"
     ;;
 
   --elm-profile)
@@ -42,7 +42,7 @@ case "$1" in
 
   --moksha)
     e_check
-    echo "${E_HOME_DIR:-$(get_home_dir)/.e}/e/config/$(get_moksha_profile)"
+    echo "${E_HOME_DIR:-$(get_home_dir)/.e}/config/$(get_moksha_profile)"
     ;;
 
   --moksha-profile)
